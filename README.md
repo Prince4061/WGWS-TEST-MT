@@ -161,3 +161,18 @@ DEFAULT_MODEL=llama-3.3-70b-versatile
 # DEFAULT_LLM_PROVIDER=openai
 # DEFAULT_MODEL=gpt-4o-mini
 ```
+
+---
+
+## 🚀 Deploy to Render (One-Click Deploy)
+
+This repository is pre-configured for Render with `render.yaml`, `Procfile`, and `gunicorn.conf.py`.
+
+1. Go to [Render Dashboard](https://dashboard.render.com/).
+2. Click **New +** -> **Blueprint**.
+3. Connect your GitHub repository (`Prince4061/WGWS-TEST-MT`).
+4. Click **Apply**.
+5. Render will automatically build and start the web service via Gunicorn.
+   - **Default Admin:** `prince`
+   - **Password:** `tarunsirkijai`
+

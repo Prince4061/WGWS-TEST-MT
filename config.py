@@ -11,7 +11,10 @@ else:
 class Config:
     BASE_DIR = BASE_DIR
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-sat-tracker-2026")
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'instance' / 'assessment_tracker.db'}")
+    _raw_db_url = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'instance' / 'assessment_tracker.db'}")
+    if _raw_db_url and _raw_db_url.startswith("postgres://"):
+        _raw_db_url = _raw_db_url.replace("postgres://", "postgresql://", 1)
+    SQLALCHEMY_DATABASE_URI = _raw_db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Uploads & Reports Directories
