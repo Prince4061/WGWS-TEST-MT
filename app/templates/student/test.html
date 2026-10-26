@@ -1,0 +1,419 @@
+{% extends "base.html" %}
+
+{% block title %}{{ test.name }} &bull; Live Test{% endblock %}
+
+{% block content %}
+<!-- Top Header / Timer Bar -->
+<div class="timer-bar">
+  <div>
+    <div style="font-weight: 700; color: var(--primary); font-size: 1.1rem;">{{ test.name }}</div>
+    <div style="font-size: 0.85rem; color: var(--muted);">Student: <b>{{ student.name }}</b> &bull; Class {{ test.class_name }}</div>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 1.5rem;">
+    <div id="saveIndicator" style="font-size: 0.82rem; color: var(--success); font-weight: 600; display: flex; align-items: center; gap: 4px;">
+      <span>●</span> Saved
+    </div>
+
+    <div class="timer-box" id="timerBox">
+      <span>⏱</span>
+      <span id="timerDisplay">--:--</span>
+    </div>
+  </div>
+</div>
+
+<!-- Anti-tamper Tab Switch Warning Banner (hidden initially) -->
+<div id="tabWarning" style="display: none; background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 0.65rem 1rem; border-radius: var(--radius-sm); margin-bottom: 1rem; font-size: 0.88rem; font-weight: 500;">
+  ⚠️ <b>Notice:</b> Tab switch detected. Please remain on the assessment screen. Tab switches are logged for teacher review.
+</div>
+
+<!-- Main Test Layout -->
+<div class="test-layout">
+  <!-- Left / Question Pane -->
+  <div class="question-box">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <span style="font-weight: 700; color: var(--primary); font-size: 1rem;" id="qIndexLabel">Question 1 of {{ questions|length }}</span>
+        <span class="badge" id="qTopicBadge" style="background: #e0f2fe; color: #0369a1;">Topic</span>
+        <span class="badge" id="qDiffBadge">Difficulty</span>
+      </div>
+      <div>
+        <button type="button" class="btn btn-secondary btn-sm" id="markReviewBtn" onclick="toggleMarkReview()">
+          🔖 Mark for Review
+        </button>
+      </div>
+    </div>
+
+    <!-- Question Text -->
+    <div class="q-title" id="questionText">Loading question...</div>
+
+    <!-- 4 Options -->
+    <div class="option-cards" id="optionsContainer">
+      <!-- Options injected by JS -->
+    </div>
+
+    <!-- Question Action Buttons -->
+    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 1.25rem;">
+      <div>
+        <button type="button" class="btn btn-secondary" id="clearBtn" onclick="clearCurrentSelection()">
+          Clear Response
+        </button>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button type="button" class="btn btn-secondary" id="prevBtn" onclick="navigatePrev()">
+          &larr; Previous
+        </button>
+        <button type="button" class="btn btn-primary" id="nextBtn" onclick="navigateNext()">
+          Next &rarr;
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right / Question Palette -->
+  <div class="card" style="padding: 1.25rem; height: fit-content;">
+    <div class="card-header" style="font-size: 1rem; margin-bottom: 0.75rem;">
+      <span>Question Palette</span>
+      <span style="font-size: 0.8rem; color: var(--muted); font-weight: normal;">{{ questions|length }} Total</span>
+    </div>
+
+    <div class="palette-grid" id="paletteGrid">
+      <!-- Buttons injected by JS -->
+    </div>
+
+    <!-- Palette Legend -->
+    <div class="palette-legend">
+      <div class="legend-item">
+        <div class="legend-dot" style="background: var(--success);"></div>
+        <span>Answered (<span id="countAnswered">0</span>)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background: var(--purple);"></div>
+        <span>Marked for Review (<span id="countReview">0</span>)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background: #ffffff; border: 1.5px solid var(--border);"></div>
+        <span>Unanswered (<span id="countUnanswered">0</span>)</span>
+      </div>
+    </div>
+
+    <hr style="margin: 1.25rem 0; border: none; border-top: 1px solid var(--border);">
+
+    <button type="button" class="btn btn-success" style="width: 100%; font-size: 1rem; padding: 0.65rem;" onclick="openSubmitModal()">
+      Submit Assessment &check;
+    </button>
+  </div>
+</div>
+
+<!-- Submit Confirmation Modal -->
+<div id="submitModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 100; align-items: center; justify-content: center;">
+  <div class="card" style="max-width: 480px; width: 90%; padding: 2rem; box-shadow: var(--shadow-lg);">
+    <h3 style="font-size: 1.3rem; font-weight: 700; color: var(--primary); margin-bottom: 0.75rem;">Submit Assessment?</h3>
+    <p style="color: var(--slate); font-size: 0.92rem; margin-bottom: 1.25rem;">Are you sure you want to finish and submit your test? Once submitted, you cannot change your answers.</p>
+
+    <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.85rem; margin-bottom: 1.5rem; font-size: 0.9rem;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+        <span>Answered Questions:</span>
+        <strong style="color: var(--success);" id="modalAnswered">0</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+        <span>Marked for Review:</span>
+        <strong style="color: var(--purple);" id="modalReview">0</strong>
+      </div>
+      <div style="display: flex; justify-content: space-between;">
+        <span>Unanswered Questions:</span>
+        <strong style="color: var(--danger);" id="modalUnanswered">0</strong>
+      </div>
+    </div>
+
+    <form id="submitForm" action="{{ url_for('student.submit_test') }}" method="POST">
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button type="button" class="btn btn-secondary" onclick="closeSubmitModal()">Return to Test</button>
+        <button type="submit" class="btn btn-success">Yes, Submit Final Score</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Safe JSON injection of questions and prior answers
+  const questions = {{ questions|tojson }};
+  const userAnswers = {{ user_answers|tojson }};
+  let remainingSeconds = {{ remaining_sec }};
+
+  let currentIndex = 0;
+  const reviewFlags = {}; // index -> boolean
+  let questionStartTime = Date.now();
+
+  // Initialize Palette & UI
+  function init() {
+    renderPalette();
+    loadQuestion(0);
+    startTimer();
+    setupTabSwitchListener();
+    updateCounts();
+  }
+
+  // Timer countdown
+  function startTimer() {
+    const timerDisplay = document.getElementById("timerDisplay");
+    const timerBox = document.getElementById("timerBox");
+
+    function update() {
+      if (remainingSeconds <= 0) {
+        timerDisplay.textContent = "00:00";
+        // Auto-submit immediately
+        document.getElementById("submitForm").submit();
+        return;
+      }
+
+      const m = Math.floor(remainingSeconds / 60);
+      const s = remainingSeconds % 60;
+      timerDisplay.textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+
+      // Urgent highlight when less than 2 minutes remain
+      if (remainingSeconds < 120) {
+        timerBox.classList.add("timer-urgent");
+      }
+
+      remainingSeconds--;
+    }
+
+    update();
+    setInterval(update, 1000);
+  }
+
+  // Load a question into view
+  function loadQuestion(index) {
+    recordDwellTime(); // flush time spent on previous question
+
+    currentIndex = index;
+    questionStartTime = Date.now();
+    const q = questions[index];
+
+    document.getElementById("qIndexLabel").textContent = `Question ${index + 1} of ${questions.length}`;
+    document.getElementById("qTopicBadge").textContent = q.topic || "General";
+    
+    const diffBadge = document.getElementById("qDiffBadge");
+    diffBadge.textContent = (q.difficulty || "medium").toUpperCase();
+    diffBadge.className = `badge badge-${q.difficulty || "medium"}`;
+
+    document.getElementById("questionText").textContent = q.text;
+
+    // Build options
+    const container = document.getElementById("optionsContainer");
+    container.innerHTML = "";
+
+    const opts = [
+      { key: "A", text: q.opt_a },
+      { key: "B", text: q.opt_b },
+      { key: "C", text: q.opt_c },
+      { key: "D", text: q.opt_d }
+    ];
+
+    const currentSelected = userAnswers[q.id] || null;
+
+    opts.forEach(opt => {
+      const card = document.createElement("div");
+      card.className = "option-card" + (currentSelected === opt.key ? " selected" : "");
+      card.onclick = () => selectOption(opt.key);
+
+      card.innerHTML = `
+        <div class="option-letter">${opt.key}</div>
+        <div style="flex: 1; font-size: 0.95rem;">${escapeHtml(opt.text)}</div>
+      `;
+      container.appendChild(card);
+    });
+
+    // Update Nav buttons
+    document.getElementById("prevBtn").disabled = (currentIndex === 0);
+    document.getElementById("nextBtn").textContent = (currentIndex === questions.length - 1) ? "Review Palette &rarr;" : "Next &rarr;";
+
+    // Update Mark for review button label
+    const isRev = !!reviewFlags[currentIndex];
+    const revBtn = document.getElementById("markReviewBtn");
+    revBtn.textContent = isRev ? "✓ Marked for Review" : "🔖 Mark for Review";
+    revBtn.className = isRev ? "btn btn-primary btn-sm" : "btn btn-secondary btn-sm";
+
+    highlightCurrentPalette();
+  }
+
+  // Option selection with auto-save
+  function selectOption(optionKey) {
+    const q = questions[currentIndex];
+    const prev = userAnswers[q.id];
+    const isChange = prev && prev !== optionKey;
+    userAnswers[q.id] = optionKey;
+
+    // Update options UI
+    const cards = document.querySelectorAll(".option-card");
+    const keys = ["A", "B", "C", "D"];
+    cards.forEach((c, idx) => {
+      if (keys[idx] === optionKey) c.classList.add("selected");
+      else c.classList.remove("selected");
+    });
+
+    // Send AJAX auto-save
+    sendAnswerAutoSave(q.id, optionKey, isChange);
+    renderPalette();
+    updateCounts();
+  }
+
+  function clearCurrentSelection() {
+    const q = questions[currentIndex];
+    if (userAnswers[q.id]) {
+      delete userAnswers[q.id];
+      sendAnswerAutoSave(q.id, null, true);
+      loadQuestion(currentIndex);
+      renderPalette();
+      updateCounts();
+    }
+  }
+
+  function toggleMarkReview() {
+    reviewFlags[currentIndex] = !reviewFlags[currentIndex];
+    loadQuestion(currentIndex);
+    renderPalette();
+    updateCounts();
+  }
+
+  function navigatePrev() {
+    if (currentIndex > 0) loadQuestion(currentIndex - 1);
+  }
+
+  function navigateNext() {
+    if (currentIndex < questions.length - 1) loadQuestion(currentIndex + 1);
+  }
+
+  // Dwell-time calculation
+  function recordDwellTime() {
+    if (questions[currentIndex]) {
+      const q = questions[currentIndex];
+      const dwellSec = Math.round((Date.now() - questionStartTime) / 1000);
+      if (dwellSec > 0) {
+        sendAnswerAutoSave(q.id, userAnswers[q.id] || null, false, dwellSec);
+      }
+    }
+  }
+
+  function sendAnswerAutoSave(questionId, selectedOption, isChange = false, dwellSec = 0) {
+    const indicator = document.getElementById("saveIndicator");
+    indicator.innerHTML = "<span style='color: #94a3b8;'>●</span> Saving...";
+
+    fetch("{{ url_for('student.auto_save_answer') }}", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        question_id: questionId,
+        selected_option: selectedOption,
+        dwell_sec: dwellSec,
+        is_change: isChange
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        indicator.innerHTML = "<span style='color: var(--success);'>●</span> Saved";
+      } else {
+        indicator.innerHTML = "<span style='color: var(--danger);'>●</span> Offline";
+      }
+    })
+    .catch(() => {
+      indicator.innerHTML = "<span style='color: var(--warning);'>●</span> Retrying...";
+    });
+  }
+
+  // Palette rendering
+  function renderPalette() {
+    const grid = document.getElementById("paletteGrid");
+    grid.innerHTML = "";
+
+    questions.forEach((q, idx) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "palette-btn";
+      btn.textContent = idx + 1;
+      btn.onclick = () => loadQuestion(idx);
+
+      if (reviewFlags[idx]) {
+        btn.classList.add("review");
+      } else if (userAnswers[q.id]) {
+        btn.classList.add("answered");
+      }
+
+      if (idx === currentIndex) {
+        btn.classList.add("current");
+      }
+
+      grid.appendChild(btn);
+    });
+  }
+
+  function highlightCurrentPalette() {
+    const btns = document.querySelectorAll(".palette-btn");
+    btns.forEach((b, idx) => {
+      if (idx === currentIndex) b.classList.add("current");
+      else b.classList.remove("current");
+    });
+  }
+
+  function updateCounts() {
+    let answered = 0;
+    let review = 0;
+    questions.forEach((q, idx) => {
+      if (reviewFlags[idx]) review++;
+      else if (userAnswers[q.id]) answered++;
+    });
+    const unanswered = questions.length - (answered + review);
+
+    document.getElementById("countAnswered").textContent = answered;
+    document.getElementById("countReview").textContent = review;
+    document.getElementById("countUnanswered").textContent = unanswered;
+  }
+
+  // Tab switch monitor
+  function setupTabSwitchListener() {
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        document.getElementById("tabWarning").style.display = "block";
+        fetch("{{ url_for('student.report_tab_switch') }}", { method: "POST" });
+      }
+    });
+  }
+
+  // Submit Modal
+  function openSubmitModal() {
+    recordDwellTime();
+    updateCounts();
+
+    let answered = 0;
+    let review = 0;
+    questions.forEach((q, idx) => {
+      if (reviewFlags[idx]) review++;
+      else if (userAnswers[q.id]) answered++;
+    });
+    const unanswered = questions.length - (answered + review);
+
+    document.getElementById("modalAnswered").textContent = answered;
+    document.getElementById("modalReview").textContent = review;
+    document.getElementById("modalUnanswered").textContent = unanswered;
+
+    const modal = document.getElementById("submitModal");
+    modal.style.display = "flex";
+  }
+
+  function closeSubmitModal() {
+    document.getElementById("submitModal").style.display = "none";
+  }
+
+  function escapeHtml(text) {
+    if (!text) return "";
+    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  // Run on page load
+  window.addEventListener("DOMContentLoaded", init);
+</script>
+{% endblock %}

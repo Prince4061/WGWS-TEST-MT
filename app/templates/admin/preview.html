@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Preview Questions &bull; {{ test.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Assessment Preview</h1>
+    <p class="page-subtitle">{{ test.name }} &bull; {{ test.subject }} &bull; Class {{ test.class_name }} ({{ questions|length }} Questions)</p>
+  </div>
+  <div style="display: flex; gap: 10px;">
+    <a href="{{ url_for('admin.upload_questions', test_id=test.id) }}" class="btn btn-secondary">
+      🔄 Re-upload CSV
+    </a>
+    {% if test.status != 'live' %}
+      <form action="{{ url_for('admin.make_live', test_id=test.id) }}" method="POST" style="display: inline;">
+        <button type="submit" class="btn btn-success">
+          🟢 Make Test Live Now
+        </button>
+      </form>
+    {% else %}
+      <span class="badge badge-live" style="font-size: 0.9rem; padding: 0.5rem 1rem;">This Test is Currently Live</span>
+    {% endif %}
+  </div>
+</div>
+
+{% if questions %}
+  <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+    {% for q in questions %}
+      <div class="card" style="padding: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <span style="font-weight: 700; color: var(--primary);">Q{{ q.q_no }}.</span>
+            <span class="badge" style="background: #e0f2fe; color: #0284c7;">{{ q.topic }}</span>
+            <span class="badge badge-{{ q.difficulty }}">{{ q.difficulty|upper }}</span>
+            <span class="badge" style="background: #f1f5f9; color: var(--slate);">{{ q.question_type }}</span>
+          </div>
+          <div>
+            <span class="badge" style="background: #dcfce7; color: #15803d; font-size: 0.8rem;">
+              Correct: Option {{ q.correct_option }}
+            </span>
+          </div>
+        </div>
+
+        <div style="font-size: 1.05rem; font-weight: 600; color: var(--dark); margin-bottom: 1rem;">
+          {{ q.text }}
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; margin-bottom: 0.75rem; font-size: 0.9rem;">
+          <div style="padding: 0.55rem 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border); {% if q.correct_option == 'A' %}background: var(--success-light); border-color: #86efac; font-weight: 600;{% endif %}">
+            <b>A:</b> {{ q.opt_a }}
+          </div>
+          <div style="padding: 0.55rem 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border); {% if q.correct_option == 'B' %}background: var(--success-light); border-color: #86efac; font-weight: 600;{% endif %}">
+            <b>B:</b> {{ q.opt_b }}
+          </div>
+          <div style="padding: 0.55rem 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border); {% if q.correct_option == 'C' %}background: var(--success-light); border-color: #86efac; font-weight: 600;{% endif %}">
+            <b>C:</b> {{ q.opt_c }}
+          </div>
+          <div style="padding: 0.55rem 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border); {% if q.correct_option == 'D' %}background: var(--success-light); border-color: #86efac; font-weight: 600;{% endif %}">
+            <b>D:</b> {{ q.opt_d }}
+          </div>
+        </div>
+
+        {% if q.explanation %}
+          <div style="font-size: 0.84rem; color: var(--muted); background: #f8fafc; padding: 0.5rem 0.75rem; border-radius: var(--radius-sm);">
+            💡 <b>Explanation:</b> {{ q.explanation }}
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card" style="text-align: center; padding: 3rem;">
+    <p>No questions found for this assessment.</p>
+    <a href="{{ url_for('admin.upload_questions', test_id=test.id) }}" class="btn btn-primary" style="margin-top: 1rem;">Upload CSV Questions</a>
+  </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Diagnostic Report &bull; {{ student.name }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 860px; margin: 1.5rem auto;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+    <a href="{{ url_for('student.result', attempt_id=attempt.id) }}" class="btn btn-secondary btn-sm">
+      &larr; Back to Results
+    </a>
+    <a href="{{ url_for('report.download_pdf', attempt_id=attempt.id) }}" class="btn btn-primary">
+      📥 Download Official PDF Report
+    </a>
+  </div>
+
+  <div class="card" style="padding: 2.25rem;">
+    <!-- School Header -->
+    <div style="border-bottom: 2px solid var(--primary); padding-bottom: 1rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h1 style="font-size: 1.5rem; font-weight: 800; color: var(--primary); text-transform: uppercase;">
+          {{ test.subject }} Diagnostic Assessment Report
+        </h1>
+        <p style="color: var(--secondary); font-weight: 600; font-size: 0.95rem;">
+          {{ test.name }} &bull; Class {{ test.class_name }}
+        </p>
+      </div>
+      <div style="text-align: right;">
+        <span class="badge" style="background: var(--primary-light); color: var(--primary); font-size: 0.85rem;">
+          Attempt #{{ attempt.id }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Student & Metadata Table -->
+    <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.92rem;">
+      <div>
+        <div><b>Student Name:</b> {{ student.name }}</div>
+        <div style="margin-top: 4px;"><b>Class / Section:</b> Class {{ student.class_name }}</div>
+      </div>
+      <div>
+        <div><b>Date:</b> {{ attempt.submitted_at.strftime('%d %B %Y, %I:%M %p') if attempt.submitted_at else 'N/A' }}</div>
+        <div style="margin-top: 4px;"><b>Duration Taken:</b> {{ attempt.total_time_sec // 60 }} mins {{ attempt.total_time_sec % 60 }} secs</div>
+      </div>
+    </div>
+
+    <!-- Summary Metrics -->
+    <div class="stats-grid" style="margin-bottom: 1.75rem;">
+      <div class="stat-card">
+        <div class="stat-icon">🎯</div>
+        <div>
+          <div class="stat-val" style="color: var(--primary);">{{ attempt.score }} <span style="font-size: 0.9rem; color: var(--muted);">/ {{ attempt.max_score }}</span></div>
+          <div class="stat-lbl">FINAL SCORE</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #e0f2fe; color: #0284c7;">📈</div>
+        <div>
+          <div class="stat-val">{{ percentage }}%</div>
+          <div class="stat-lbl">ACCURACY</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: var(--success-light); color: var(--success);">✓</div>
+        <div>
+          <div class="stat-val" style="color: var(--success);">{{ attempt.correct }}</div>
+          <div class="stat-lbl">CORRECT</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: var(--danger-light); color: var(--danger);">✕</div>
+        <div>
+          <div class="stat-val" style="color: var(--danger);">{{ attempt.wrong }}</div>
+          <div class="stat-lbl">INCORRECT</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Deep AI Evaluation Feedback -->
+    {% if feedback and feedback.json_payload %}
+      {% set payload = feedback.json_payload %}
+      <div style="margin-bottom: 2rem;">
+        <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 0.75rem;">
+          🤖 Deep AI Diagnostic Insights
+        </h2>
+
+        {% if payload.summary %}
+          <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1rem; font-size: 0.92rem; color: var(--dark);">
+            <b>Executive Summary:</b> {{ payload.summary }}
+          </div>
+        {% endif %}
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <!-- Strengths -->
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-md); padding: 1rem;">
+            <div style="font-weight: 700; color: #166534; font-size: 0.95rem; margin-bottom: 0.5rem;">🌟 Demonstrated Strengths:</div>
+            <ul style="padding-left: 1.15rem; font-size: 0.88rem; color: #14532d; line-height: 1.6;">
+              {% for s in payload.get('strengths', []) %}
+                <li><b>{{ s.topic }}:</b> {{ s.evidence }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+
+          <!-- Weak Areas -->
+          <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius-md); padding: 1rem;">
+            <div style="font-weight: 700; color: #991b1b; font-size: 0.95rem; margin-bottom: 0.5rem;">⚠️ Target Improvement Areas:</div>
+            <ul style="padding-left: 1.15rem; font-size: 0.88rem; color: #7f1d1d; line-height: 1.6;">
+              {% for w in payload.get('weak_areas', []) %}
+                <li><b>{{ w.topic }}</b> [{{ w.priority|upper }}]: {{ w.evidence }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+
+        <!-- Action Plan -->
+        {% if payload.action_plan %}
+          <div style="background: #ffffff; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1rem;">
+            <div style="font-weight: 700; color: var(--slate); font-size: 0.95rem; margin-bottom: 0.75rem;">📋 Recommended Action & Practice Steps:</div>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+              {% for step in payload.action_plan %}
+                <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); border-left: 3px solid var(--secondary);">
+                  <div style="font-size: 0.88rem; color: var(--dark);">
+                    <b>{{ loop.index }}.</b> {{ step.step }} <span style="font-size: 0.8rem; color: var(--muted);">(Ref: {{ step.resource_hint }})</span>
+                  </div>
+                  <span class="badge" style="background: #e2e8f0; color: var(--slate);">{{ step.estimated_time }}</span>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+
+        {% if payload.encouragement %}
+          <div style="text-align: center; font-style: italic; color: #047857; font-weight: 500; font-size: 0.92rem;">
+            "{{ payload.encouragement }}"
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <!-- Mistakes Review Section -->
+    <div style="margin-top: 2rem;">
+      <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 1rem;">
+        Detailed Mistakes Review & Correct Explanations
+      </h2>
+
+      {% set wrong_items = items|selectattr('is_correct', 'equalto', false)|list %}
+      {% if wrong_items %}
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          {% for it in wrong_items %}
+            <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: var(--radius-md); padding: 1.15rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <span style="font-weight: 700; color: #991b1b;">Question {{ it.question.q_no }} &bull; Topic: {{ it.question.topic }}</span>
+                <span style="font-size: 0.8rem; color: var(--muted);">Time spent: {{ it.time_spent }}s</span>
+              </div>
+              <div style="font-weight: 600; font-size: 0.98rem; margin-bottom: 0.75rem; color: var(--dark);">
+                {{ it.question.text }}
+              </div>
+              <div style="font-size: 0.88rem; margin-bottom: 0.5rem;">
+                Student Selected: <b style="color: var(--danger);">Option {{ it.selected_option if it.selected_option else 'Skipped' }}</b> &nbsp;|&nbsp; Correct Answer: <b style="color: var(--success);">Option {{ it.question.correct_option }}</b>
+              </div>
+              {% if it.question.explanation %}
+                <div style="background: #ffffff; padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); font-size: 0.85rem; color: var(--slate); border: 1px dashed #fca5a5;">
+                  💡 <b>Explanation:</b> {{ it.question.explanation }}
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div style="background: var(--success-light); border: 1px solid #bbf7d0; color: var(--success); padding: 1.5rem; text-align: center; border-radius: var(--radius-md); font-weight: 600;">
+          🎉 Outstanding! 100% correct answers with zero mistakes!
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

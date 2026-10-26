@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Student Assessment Tracker{% endblock %}</title>
+  <!-- Google Font Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <a href="{{ url_for('student.index') }}" class="nav-brand">
+      <span class="brand-badge">SAT</span>
+      <span>Student Assessment Tracker</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="{{ url_for('student.index') }}">Student Portal</a></li>
+      {% if current_user.is_authenticated %}
+        <li><a href="{{ url_for('admin.dashboard') }}">Admin Dashboard</a></li>
+        <li><a href="{{ url_for('admin.settings') }}">Settings</a></li>
+        <li><a href="{{ url_for('auth.logout') }}" style="color: var(--danger);">Logout</a></li>
+      {% else %}
+        <li><a href="{{ url_for('auth.login') }}">Admin Login</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+
+  <!-- Main Container -->
+  <main class="container">
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+              <span>{{ message }}</span>
+              <button onclick="this.parentElement.style.display='none'" style="background:none;border:none;cursor:pointer;font-weight:bold;color:inherit;">&times;</button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>&copy; 2026 Student Assessment Tracker &bull; Powered by LangChain Deep Agents &bull; Instant Evaluation & Diagnostic Reporting</p>
+  </footer>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

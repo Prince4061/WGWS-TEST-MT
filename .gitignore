@@ -1,0 +1,42 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Environment variables & secrets
+.env
+!.env.example
+
+# PyInstaller / build artifacts
+build/
+dist/
+*.manifest
+
+# SQLite & local databases
+instance/*.db
+*.sqlite3
+*.db
+
+# Test reports / generated PDFs & uploads
+reports/*.pdf
+!reports/.gitkeep
+tests/test_reports/*.pdf
+tests/test_uploads/*
+!tests/test_uploads/.gitkeep
+
+# Testing & cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

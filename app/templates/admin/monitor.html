@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Live Monitor &bull; {{ test.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 4px;">
+      <span class="badge {% if test.status == 'live' %}badge-live{% else %}badge-closed{% endif %}">
+        {{ test.status|upper }}
+      </span>
+      <h1 class="page-title" style="margin: 0;">Live Assessment Monitor</h1>
+    </div>
+    <p class="page-subtitle">{{ test.name }} &bull; {{ test.subject }} &bull; Class {{ test.class_name }}</p>
+  </div>
+  <div style="display: flex; gap: 10px;">
+    {% if test.status == 'live' %}
+      <form action="{{ url_for('admin.close_test', test_id=test.id) }}" method="POST">
+        <button type="submit" class="btn btn-danger" onclick="return confirm('Close this live test now?')">
+          🛑 Close Test
+        </button>
+      </form>
+    {% endif %}
+    <a href="{{ url_for('admin.results', test_id=test.id) }}" class="btn btn-secondary">
+      View Final Results &rarr;
+    </a>
+  </div>
+</div>
+
+<!-- Live Metrics -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon" style="background: #e0f2fe; color: #0284c7;">👥</div>
+    <div>
+      <div class="stat-val" id="totalStarted">{{ attempts|length }}</div>
+      <div class="stat-lbl">STUDENTS JOINED</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon" style="background: var(--warning-light); color: var(--warning);">⏳</div>
+    <div>
+      <div class="stat-val" id="inProgressCount" style="color: var(--warning);">{{ in_progress_count }}</div>
+      <div class="stat-lbl">CURRENTLY WRITING</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon" style="background: var(--success-light); color: var(--success);">✓</div>
+    <div>
+      <div class="stat-val" id="submittedCount" style="color: var(--success);">{{ submitted_count }}</div>
+      <div class="stat-lbl">SUBMITTED ATTEMPTS</div>
+    </div>
+  </div>
+</div>
+
+<!-- Real-time Student Table -->
+<div class="card" style="padding: 1.5rem;">
+  <div class="card-header">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span>Live Student Tracker</span>
+      <span id="livePulse" style="width: 8px; height: 8px; border-radius: 50%; background: var(--success); display: inline-block;"></span>
+      <span style="font-size: 0.78rem; color: var(--muted); font-weight: normal;">(Auto-updating every 4s)</span>
+    </div>
+    <div>
+      <a href="{{ url_for('admin.export_results_csv', test_id=test.id) }}" class="btn btn-secondary btn-sm">
+        Export CSV
+      </a>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Attempt ID</th>
+          <th>Student Name</th>
+          <th>Status</th>
+          <th>Current Score</th>
+          <th>Tab Switches</th>
+          <th>Elapsed Time</th>
+          <th style="text-align: right;">Action</th>
+        </tr>
+      </thead>
+      <tbody id="monitorTableBody">
+        {% for a in attempts %}
+          <tr>
+            <td>#{{ a.id }}</td>
+            <td style="font-weight: 600;">{{ a.student.name }}</td>
+            <td>
+              {% if a.status == 'in_progress' %}
+                <span class="badge" style="background: #fef3c7; color: #b45309;">In Progress</span>
+              {% elif a.status == 'report_ready' %}
+                <span class="badge badge-live">Report Ready</span>
+              {% else %}
+                <span class="badge" style="background: #e0f2fe; color: #0284c7;">{{ a.status }}</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if a.status != 'in_progress' %}
+                <b>{{ a.score }}</b> / {{ a.max_score }}
+              {% else %}
+                <span style="color: var(--muted);">Taking Test</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if a.tab_switches and a.tab_switches > 0 %}
+                <span class="badge" style="background: #fee2e2; color: #991b1b;">{{ a.tab_switches }} Switches</span>
+              {% else %}
+                <span style="color: var(--muted); font-size: 0.85rem;">0</span>
+              {% endif %}
+            </td>
+            <td>{{ a.total_time_sec // 60 }}m {{ a.total_time_sec % 60 }}s</td>
+            <td style="text-align: right;">
+              {% if a.status != 'in_progress' %}
+                <a href="{{ url_for('report.download_pdf', attempt_id=a.id) }}" class="btn btn-secondary btn-sm">
+                  PDF Report
+                </a>
+              {% else %}
+                <span style="font-size: 0.8rem; color: var(--muted);">Active</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="7" style="text-align: center; color: var(--muted); padding: 2rem;">
+              No students have started this test yet. Students can join at the Student Portal by selecting Class {{ test.class_name }}.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Live polling for monitor table
+  const testId = {{ test.id }};
+  setInterval(() => {
+    fetch(`/admin/tests/${testId}/monitor/data`)
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("totalStarted").textContent = data.total;
+        document.getElementById("inProgressCount").textContent = data.in_progress;
+        document.getElementById("submittedCount").textContent = data.submitted;
+
+        const tbody = document.getElementById("monitorTableBody");
+        if (data.attempts.length === 0) return;
+
+        let html = "";
+        data.attempts.forEach(a => {
+          const m = Math.floor(a.time_sec / 60);
+          const s = a.time_sec % 60;
+          const statusBadge = a.status === 'in_progress'
+            ? `<span class="badge" style="background: #fef3c7; color: #b45309;">In Progress</span>`
+            : `<span class="badge badge-live">${a.status}</span>`;
+
+          const scoreText = a.status !== 'in_progress'
+            ? `<b>${a.score}</b> / ${a.max_score}`
+            : `<span style="color: var(--muted);">Taking Test</span>`;
+
+          const tabBadge = a.tab_switches > 0
+            ? `<span class="badge" style="background: #fee2e2; color: #991b1b;">${a.tab_switches} Switches</span>`
+            : `<span style="color: var(--muted); font-size: 0.85rem;">0</span>`;
+
+          const actionBtn = a.status !== 'in_progress'
+            ? `<a href="/report/${a.attempt_id}/download" class="btn btn-secondary btn-sm">PDF Report</a>`
+            : `<span style="font-size: 0.8rem; color: var(--muted);">Active</span>`;
+
+          html += `
+            <tr>
+              <td>#${a.attempt_id}</td>
+              <td style="font-weight: 600;">${a.student_name}</td>
+              <td>${statusBadge}</td>
+              <td>${scoreText}</td>
+              <td>${tabBadge}</td>
+              <td>${m}m ${s}s</td>
+              <td style="text-align: right;">${actionBtn}</td>
+            </tr>
+          `;
+        });
+        tbody.innerHTML = html;
+      })
+      .catch(err => console.log("Monitor poll error:", err));
+  }, 4000);
+</script>
+{% endblock %}

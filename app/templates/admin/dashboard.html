@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Teacher Admin Dashboard &bull; SAT{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Teacher Admin Dashboard</h1>
+    <p class="page-subtitle">School: <b>{{ school_settings.school_name if school_settings else "Delhi Public Model School" }}</b></p>
+  </div>
+  <div style="display: flex; gap: 10px;">
+    <a href="{{ url_for('admin.download_template') }}" class="btn btn-secondary">
+      📥 Download CSV Template
+    </a>
+    <a href="{{ url_for('admin.new_test') }}" class="btn btn-primary">
+      ➕ Create New Test
+    </a>
+  </div>
+</div>
+
+<!-- Overview Metric Cards -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon">📚</div>
+    <div>
+      <div class="stat-val">{{ total_tests }}</div>
+      <div class="stat-lbl">TOTAL TESTS</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon" style="background: var(--success-light); color: var(--success);">🟢</div>
+    <div>
+      <div class="stat-val" style="color: var(--success);">{{ live_tests }}</div>
+      <div class="stat-lbl">CURRENTLY LIVE</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon" style="background: #e0f2fe; color: #0284c7;">👨‍🎓</div>
+    <div>
+      <div class="stat-val">{{ total_attempts }}</div>
+      <div class="stat-lbl">STUDENT ATTEMPTS</div>
+    </div>
+  </div>
+</div>
+
+<!-- Tests List Table -->
+<div class="card" style="padding: 1.5rem;">
+  <div class="card-header">
+    <span>All Assessments</span>
+    <span style="font-size: 0.85rem; color: var(--muted); font-weight: normal;">Showing {{ tests|length }} assessments</span>
+  </div>
+
+  {% if tests %}
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Test Name</th>
+            <th>Subject</th>
+            <th>Class</th>
+            <th>Questions</th>
+            <th>Duration</th>
+            <th>Created</th>
+            <th style="text-align: right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in tests %}
+            <tr>
+              <td>
+                {% if t.status == 'live' %}
+                  <span class="badge badge-live">Live</span>
+                {% elif t.status == 'closed' %}
+                  <span class="badge badge-closed">Closed</span>
+                {% else %}
+                  <span class="badge badge-draft">Draft</span>
+                {% endif %}
+              </td>
+              <td>
+                <div style="font-weight: 600; color: var(--dark);">{{ t.name }}</div>
+                <div style="font-size: 0.78rem; color: var(--muted);">ID: #{{ t.id }}</div>
+              </td>
+              <td>{{ t.subject }}</td>
+              <td><span class="badge" style="background: #e2e8f0; color: var(--slate);">Class {{ t.class_name }}</span></td>
+              <td>{{ t.questions.count() }} questions</td>
+              <td>{{ t.duration_min }} mins</td>
+              <td>{{ t.created_at.strftime('%d %b %Y') }}</td>
+              <td style="text-align: right;">
+                <div style="display: inline-flex; gap: 6px; align-items: center;">
+                  {% if t.status == 'draft' %}
+                    <a href="{{ url_for('admin.upload_questions', test_id=t.id) }}" class="btn btn-secondary btn-sm" title="Upload Questions CSV">
+                      CSV Upload
+                    </a>
+                  {% endif %}
+
+                  <a href="{{ url_for('admin.preview_test', test_id=t.id) }}" class="btn btn-secondary btn-sm" title="Preview Questions">
+                    Preview
+                  </a>
+
+                  {% if t.status == 'live' %}
+                    <a href="{{ url_for('admin.live_monitor', test_id=t.id) }}" class="btn btn-primary btn-sm" title="Live Monitor">
+                      Live Monitor
+                    </a>
+                    <form action="{{ url_for('admin.close_test', test_id=t.id) }}" method="POST" style="display: inline;">
+                      <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to close this test? Students will not be able to start new attempts.')">
+                        Close
+                      </button>
+                    </form>
+                  {% elif t.status == 'closed' or t.status == 'draft' %}
+                    <form action="{{ url_for('admin.make_live', test_id=t.id) }}" method="POST" style="display: inline;">
+                      <button type="submit" class="btn btn-success btn-sm" title="Make this test active for Class {{ t.class_name }}">
+                        Make Live
+                      </button>
+                    </form>
+                  {% endif %}
+
+                  <a href="{{ url_for('admin.results', test_id=t.id) }}" class="btn btn-secondary btn-sm" title="View Results">
+                    Results
+                  </a>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div style="text-align: center; padding: 3rem 1rem;">
+      <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📝</div>
+      <h3 style="font-size: 1.15rem; color: var(--slate); margin-bottom: 0.5rem;">No assessments created yet</h3>
+      <p style="color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem;">Create your first test and upload questions via CSV template in less than 3 minutes.</p>
+      <a href="{{ url_for('admin.new_test') }}" class="btn btn-primary">Create Your First Test</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Student Assessment Portal{% endblock %}
+
+{% block content %}
+<div style="max-width: 580px; margin: 2rem auto;">
+  <div class="card" style="padding: 2.25rem;">
+    <div style="text-align: center; margin-bottom: 2rem;">
+      <div style="display: inline-block; background: var(--primary-light); color: var(--primary); padding: 12px 18px; border-radius: 50%; font-size: 2rem; margin-bottom: 0.75rem;">
+        📝
+      </div>
+      <h1 class="page-title" style="font-size: 1.75rem;">Join Live Assessment</h1>
+      <p class="page-subtitle">Enter your name and select your class to begin your test.</p>
+    </div>
+
+    <form action="{{ url_for('student.start') }}" method="POST">
+      <div class="form-group">
+        <label for="name" class="form-label">Full Name</label>
+        <input 
+          type="text" 
+          id="name" 
+          name="name" 
+          class="form-control" 
+          placeholder="e.g. Aarav Sharma" 
+          required 
+          minlength="2" 
+          maxlength="50"
+          autocomplete="name"
+          autofocus
+        >
+        <small style="color: var(--muted); font-size: 0.78rem;">Use your official school name.</small>
+      </div>
+
+      <div class="form-group" style="margin-top: 1rem;">
+        <label for="class_name" class="form-label">Class / Grade</label>
+        <select id="class_name" name="class_name" class="form-control" required>
+          <option value="" disabled selected>-- Select your class --</option>
+          <option value="6">Class 6</option>
+          <option value="7">Class 7</option>
+          <option value="8">Class 8</option>
+          <option value="9">Class 9</option>
+          <option value="10">Class 10</option>
+          <option value="11">Class 11</option>
+          <option value="12">Class 12</option>
+        </select>
+      </div>
+
+      <div style="margin-top: 1.75rem;">
+        <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">
+          Start Assessment &rarr;
+        </button>
+      </div>
+    </form>
+
+    <div style="margin-top: 2rem; padding: 1rem; background: #f8fafc; border-radius: var(--radius-md); font-size: 0.82rem; color: var(--slate); border: 1px dashed var(--border);">
+      <p style="font-weight: 600; margin-bottom: 4px;">ℹ️ Student Instructions:</p>
+      <ul style="padding-left: 1.25rem; line-height: 1.6;">
+        <li>No login or password needed.</li>
+        <li>Your test timer starts only when you click "Begin Test".</li>
+        <li>Answers are saved automatically as you select them.</li>
+        <li>Personalized AI feedback will be generated upon completion!</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

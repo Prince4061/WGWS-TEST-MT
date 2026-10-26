@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Assessment Results &bull; {{ test.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Assessment Results & Analytics</h1>
+    <p class="page-subtitle">{{ test.name }} &bull; {{ test.subject }} &bull; Class {{ test.class_name }}</p>
+  </div>
+  <div style="display: flex; gap: 10px;">
+    <a href="{{ url_for('admin.export_results_csv', test_id=test.id) }}" class="btn btn-primary">
+      📥 Export Complete Results (CSV)
+    </a>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">
+      Dashboard
+    </a>
+  </div>
+</div>
+
+<!-- Class Benchmark Metrics -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon" style="background: #e0f2fe; color: #0284c7;">📊</div>
+    <div>
+      <div class="stat-val">{{ avg_score }}</div>
+      <div class="stat-lbl">CLASS AVERAGE SCORE</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon" style="background: var(--success-light); color: var(--success);">🏆</div>
+    <div>
+      <div class="stat-val" style="color: var(--success);">{{ highest }}</div>
+      <div class="stat-lbl">HIGHEST SCORE</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon" style="background: #f1f5f9; color: var(--slate);">📉</div>
+    <div>
+      <div class="stat-val">{{ lowest }}</div>
+      <div class="stat-lbl">LOWEST SCORE</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-icon" style="background: var(--primary-light); color: var(--primary);">👨‍🎓</div>
+    <div>
+      <div class="stat-val">{{ attempts|length }}</div>
+      <div class="stat-lbl">TOTAL ATTEMPTS</div>
+    </div>
+  </div>
+</div>
+
+<!-- Student Results Table -->
+<div class="card" style="padding: 1.5rem;">
+  <div class="card-header">
+    <span>Student Performance Roster</span>
+  </div>
+
+  {% if attempts %}
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Student Name</th>
+            <th>Score</th>
+            <th>Percentage</th>
+            <th>Correct / Wrong</th>
+            <th>Time Spent</th>
+            <th>Tab Switches</th>
+            <th style="text-align: right;">Reports</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in attempts %}
+            {% set pct = (a.score / a.max_score * 100)|round(1) if a.max_score > 0 else 0 %}
+            <tr>
+              <td><b>#{{ loop.index }}</b></td>
+              <td>
+                <div style="font-weight: 600; color: var(--dark);">{{ a.student.name }}</div>
+                <div style="font-size: 0.78rem; color: var(--muted);">Class {{ a.student.class_name }} &bull; Attempt #{{ a.id }}</div>
+              </td>
+              <td>
+                <span style="font-weight: 700; font-size: 1.05rem; color: var(--primary);">{{ a.score }}</span>
+                <span style="font-size: 0.8rem; color: var(--muted);">/ {{ a.max_score }}</span>
+              </td>
+              <td>
+                <span class="badge" style="background: {% if pct >= 75 %}#dcfce7; color: #166534;{% elif pct >= 50 %}#fef9c3; color: #854d0e;{% else %}#fee2e2; color: #991b1b;{% endif %} font-size: 0.82rem;">
+                  {{ pct }}%
+                </span>
+              </td>
+              <td>
+                <span style="color: var(--success); font-weight: 600;">{{ a.correct }}</span>
+                <span style="color: var(--muted);">/</span>
+                <span style="color: var(--danger); font-weight: 600;">{{ a.wrong }}</span>
+                <span style="color: var(--muted); font-size: 0.75rem;">({{ a.skipped }} skip)</span>
+              </td>
+              <td>{{ a.total_time_sec // 60 }}m {{ a.total_time_sec % 60 }}s</td>
+              <td>
+                {% if a.tab_switches and a.tab_switches > 0 %}
+                  <span class="badge" style="background: #fee2e2; color: #991b1b;">{{ a.tab_switches }}</span>
+                {% else %}
+                  <span style="color: var(--muted);">0</span>
+                {% endif %}
+              </td>
+              <td style="text-align: right;">
+                <div style="display: inline-flex; gap: 6px;">
+                  <a href="{{ url_for('report.download_pdf', attempt_id=a.id) }}" class="btn btn-primary btn-sm">
+                    PDF Report
+                  </a>
+                  <a href="{{ url_for('report.view_web_report', attempt_id=a.id) }}" class="btn btn-secondary btn-sm">
+                    Web View
+                  </a>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div style="text-align: center; padding: 2.5rem; color: var(--muted);">
+      No submissions recorded for this test yet.
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

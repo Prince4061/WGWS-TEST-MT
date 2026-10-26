@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Assessment Result &bull; {{ test.name }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 1.5rem auto;">
+
+  <!-- Header Card -->
+  <div class="card" style="padding: 2rem; margin-bottom: 1.5rem; text-align: center;">
+    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">
+      {% if percentage >= 75 %}🎉{% elif percentage >= 50 %}👍{% else %}💪{% endif %}
+    </div>
+    <h1 class="page-title" style="margin-bottom: 0.25rem;">Assessment Completed!</h1>
+    <p class="page-subtitle">{{ test.name }} &bull; {{ test.subject }} &bull; Class {{ test.class_name }}</p>
+    <p style="font-size: 0.9rem; color: var(--muted); margin-top: 4px;">Student: <b>{{ student.name }}</b></p>
+  </div>
+
+  <!-- Score Summary Metric Cards -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon" style="background: var(--primary-light); color: var(--primary);">🎯</div>
+      <div>
+        <div class="stat-val" style="color: var(--primary);">{{ attempt.score }} <span style="font-size: 1rem; color: var(--muted);">/ {{ attempt.max_score }}</span></div>
+        <div class="stat-lbl">FINAL SCORE</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon" style="background: #e0f2fe; color: #0284c7;">📈</div>
+      <div>
+        <div class="stat-val">{{ percentage }}%</div>
+        <div class="stat-lbl">PERCENTAGE</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon" style="background: var(--success-light); color: var(--success);">✓</div>
+      <div>
+        <div class="stat-val" style="color: var(--success);">{{ attempt.correct }}</div>
+        <div class="stat-lbl">CORRECT ANSWERS</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon" style="background: var(--danger-light); color: var(--danger);">✕</div>
+      <div>
+        <div class="stat-val" style="color: var(--danger);">{{ attempt.wrong }}</div>
+        <div class="stat-lbl">INCORRECT</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Evaluation & Report Download Card -->
+  <div class="card" style="padding: 1.75rem; margin-bottom: 1.5rem; border-color: #bfdbfe;" id="aiCard">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <span class="badge" style="background: #eff6ff; color: #1d4ed8; margin-bottom: 0.35rem;">LangChain Deep Agent</span>
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--primary);">Diagnostic Report & Personalized Feedback</h3>
+        <p style="color: var(--muted); font-size: 0.88rem;">Complete analysis of strengths, mistake patterns, and customized practice plan.</p>
+      </div>
+
+      <div id="reportActions">
+        {% if attempt.status == 'report_ready' or feedback %}
+          <div style="display: flex; gap: 10px;">
+            <a href="{{ url_for('report.download_pdf', attempt_id=attempt.id) }}" class="btn btn-primary" id="downloadPdfBtn">
+              📥 Download PDF Report
+            </a>
+            <a href="{{ url_for('report.view_web_report', attempt_id=attempt.id) }}" class="btn btn-secondary">
+              🔍 View Full Report
+            </a>
+          </div>
+        {% else %}
+          <div id="aiLoadingBox" style="display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--secondary); background: #f0f9ff; padding: 0.65rem 1.25rem; border-radius: var(--radius-sm); border: 1px dashed #7dd3fc;">
+            <span class="spinner" style="display: inline-block; animation: spin 1s linear infinite;">⏳</span>
+            <span>Deep Agent analyzing test data...</span>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Live Feedback Preview Box (populated once ready) -->
+    <div id="feedbackPreviewBox" style="{% if not feedback %}display: none;{% endif %} margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--border);">
+      {% if feedback and feedback.json_payload %}
+        <div style="background: #f8fafc; padding: 1rem; border-radius: var(--radius-md); border-left: 4px solid var(--primary); margin-bottom: 1rem;">
+          <div style="font-weight: 700; color: var(--primary); font-size: 0.95rem; margin-bottom: 4px;">Executive Summary:</div>
+          <p style="color: var(--slate); font-size: 0.9rem;">{{ feedback.json_payload.get('summary') }}</p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div style="background: var(--success-light); padding: 0.85rem; border-radius: var(--radius-sm); border: 1px solid #bbf7d0;">
+            <strong style="color: var(--success); font-size: 0.9rem;">Top Strengths:</strong>
+            <ul style="padding-left: 1.15rem; font-size: 0.85rem; color: #166534; margin-top: 4px;">
+              {% for s in feedback.json_payload.get('strengths', [])[:2] %}
+                <li><b>{{ s.topic }}:</b> {{ s.evidence }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          <div style="background: var(--danger-light); padding: 0.85rem; border-radius: var(--radius-sm); border: 1px solid #fecaca;">
+            <strong style="color: var(--danger); font-size: 0.9rem;">Recommended Focus:</strong>
+            <ul style="padding-left: 1.15rem; font-size: 0.85rem; color: #991b1b; margin-top: 4px;">
+              {% for w in feedback.json_payload.get('weak_areas', [])[:2] %}
+                <li><b>{{ w.topic }}:</b> {{ w.evidence }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+
+        {% if feedback.json_payload.get('encouragement') %}
+          <div style="font-size: 0.88rem; color: #047857; font-style: italic; text-align: center; margin-top: 0.5rem;">
+            "{{ feedback.json_payload.get('encouragement') }}"
+          </div>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  <div style="text-align: center; margin-top: 2rem;">
+    <a href="{{ url_for('student.index') }}" class="btn btn-secondary">
+      &larr; Return to Portal Home
+    </a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+  @keyframes spin { 100% { transform: rotate(360deg); } }
+</style>
+
+<script>
+  // Polling for AI report generation if not already ready
+  const isAlreadyReady = {{ 'true' if (attempt.status == 'report_ready' or feedback) else 'false' }};
+  const attemptId = {{ attempt.id }};
+
+  if (!isAlreadyReady) {
+    const pollInterval = setInterval(() => {
+      fetch(`/result/${attemptId}/status`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.is_ready) {
+            clearInterval(pollInterval);
+            // Replace loading box with buttons and reload preview
+            const actions = document.getElementById("reportActions");
+            actions.innerHTML = `
+              <div style="display: flex; gap: 10px;">
+                <a href="/report/${attemptId}/download" class="btn btn-primary">
+                  📥 Download PDF Report
+                </a>
+                <a href="/report/${attemptId}/view" class="btn btn-secondary">
+                  🔍 View Full Report
+                </a>
+              </div>
+            `;
+            // Refresh page to populate complete feedback preview cleanly
+            setTimeout(() => { window.location.reload(); }, 1200);
+          }
+        })
+        .catch(err => console.log("Status poll:", err));
+    }, 2000);
+  }
+</script>
+{% endblock %}

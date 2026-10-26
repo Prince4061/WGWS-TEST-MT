@@ -1,0 +1,14 @@
+Flask>=3.0.0
+Flask-SQLAlchemy>=3.1.0
+Flask-Login>=0.6.3
+Werkzeug>=3.0.0
+pydantic>=2.0.0
+python-dotenv>=1.0.0
+reportlab>=4.0.0
+matplotlib>=3.8.0
+deepagents
+langgraph
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-groq
+langchain-openai
