@@ -109,3 +109,7 @@ def create_app(config_class=Config):
                 app.logger.warning(f"Could not auto-seed demo test: {e}")
 
     return app
+
+
+# Default WSGI application instance (required for 'gunicorn app:app' on Render)
+app = create_app()
